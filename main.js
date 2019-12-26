@@ -67,11 +67,8 @@ for(let y = 1; y <= BOARD_WIDTH; y++) {
 
             board[y - 1][x - 1] = "*";
             rect_board[y - 1][x - 1] = rect;
-            console.log(rect_board);
     }  
 }
-console.log(board);
-console.log(rect_board);
 
 // Function for checking if game is over
 function checkWinner(arr) {
@@ -109,7 +106,7 @@ function checkWinner(arr) {
 
 // Mouse events
 function onMouseOver() {
-    console.log("onMouseOver:", this); 
+    //console.log("onMouseOver:", this); 
 
     if(this.texture == texture_rect && winner == null) {
         if(x_turn) {
@@ -129,12 +126,11 @@ function onMouseOut() {
 }
 
 function onClick() {
-    console.log("onClick:", this);
+    //console.log("onClick:", this);
     app.stage.removeChild(this.overlay);
 
     var x = this.arr_x, y = this.arr_y;
 
-    console.log(x, y, this.texture, winner);
     if(this.texture == texture_rect && winner == null) {
         if(x_turn) {
             board[y][x] = "X";
@@ -144,31 +140,25 @@ function onClick() {
             this.texture = texture_o;
         }
 
-        console.log(board);
         winner = checkWinner(board);
 
         if(winner != null) {
+            smile.texture = texture_omg;
             if(winner[0] == "X") {
                 console.log("X won!");
                 text.text = "X won!";
-                console.log(winner);
             } else if(winner[0] == "O") {
                 console.log("O won!");
                 text.text = "O won!";
             } else if(winner[0] == "-") {
+                console.log("Tie");
                 text.text = "Tie!";
+                return;
             }
-
-            smile.texture = texture_omg;
-
-            console.log(winner);
-            console.log(rect_board);
-            console.log(board);
 
             var increment = 1 / 100;
             var curr_alpha = 1;
             intervalId = window.setInterval(function() {
-                console.log("Interval");
                 curr_alpha += increment;
                 if (curr_alpha > 1 || curr_alpha < 0.5) increment = -increment;
                 rect_board[winner[1][0]][winner[1][1]].alpha = curr_alpha;
@@ -234,15 +224,16 @@ app.stage.addChild(reset_button_text);
 // Reset function
 function reset() {
     console.log("Reset");
-
     clearInterval(intervalId);
     smile.texture = texture_smile;
     x_turn = true;
     text.text = "Game in progress...";
     
-    rect_board[winner[1][0]][winner[1][1]].alpha = 1;
-    rect_board[winner[2][0]][winner[2][1]].alpha = 1;
-    rect_board[winner[3][0]][winner[3][1]].alpha = 1;
+    if(winner != null && winner != "-") {
+        rect_board[winner[1][0]][winner[1][1]].alpha = 1;
+        rect_board[winner[2][0]][winner[2][1]].alpha = 1;
+        rect_board[winner[3][0]][winner[3][1]].alpha = 1;
+    }
     winner = null;
 
     board = [];
