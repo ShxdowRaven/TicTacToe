@@ -1,4 +1,4 @@
-const BOARD_WIDTH = 3;
+const BOARD_WIDTH = 3; 
 const BOARD_HEIGHT = 3;
 
 const RECT_HEIGHT = 200;
