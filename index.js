@@ -317,7 +317,7 @@ function minimax(org_node, isMaximizingPlayer, currPlayer, count = 0) {
         if(winner != null) {
             if(winner == currPlayer) {
                 value = {score: isMaximizingPlayer ? 100 : -100};
-            } else if(winner["type"] == "-") {
+            } else if(winner == "-") {
                 value = {score: 0};
             } else {
                 value = {score: isMaximizingPlayer ? -100 : 100};
