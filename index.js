@@ -1,15 +1,10 @@
-const BOARD_WIDTH = 3; 
-const BOARD_HEIGHT = 3;
-
-const RECT_HEIGHT = 200;
-const RECT_WIDTH = 200;
-
+// Variable initializations
 let rect_board = [];
 let board = [];
 let x_turn = true;
-let winner = null;
+let winner = {type: null};
 let intervalId;
-let isVsAI = false;
+let isFirstAI = -1;
 
 // Check for WebGL support
 let type = "WebGL";
@@ -43,18 +38,18 @@ function resize() {
 }
 
 // Creating a board of rectangles
-for(let y = 1; y <= BOARD_WIDTH; y++) {
+for(let y = 0; y < 3; y++) {
     board.push([]);
     rect_board.push([]);
-    for(let x = 1; x <= BOARD_HEIGHT; x++) {
+    for(let x = 0; x < 3; x++) {
             let rect = new PIXI.Sprite(texture_rect);
             rect.interactive = true;
             rect.buttonMode = true;
 
-            rect.x = RECT_WIDTH * x;
-            rect.y = RECT_HEIGHT * y;
-            rect.arr_x = x-1;
-            rect.arr_y = y-1;
+            rect.x = 200 * (x + 1);
+            rect.y = 200 * (y + 1);
+            rect.arr_x = x;
+            rect.arr_y = y;
 
             rect
                 .on("mouseover", onMouseOver)
@@ -63,11 +58,11 @@ for(let y = 1; y <= BOARD_WIDTH; y++) {
 
             app.stage.addChild(rect);
 
-            board[y - 1].push([]);
-            rect_board[y - 1].push([]);
+            board[y].push([]);
+            rect_board[y].push([]);
 
-            board[y - 1][x - 1] = "*";
-            rect_board[y - 1][x - 1] = rect;
+            board[y][x] = "*";
+            rect_board[y][x] = rect;
     }  
 }
 
@@ -98,7 +93,7 @@ function checkWinner(arr) {
     for(let curr_row of arr) {
         for(let curr_box of curr_row) {
             if(curr_box == "*") {
-                return null;
+                return {type: null};
             }
         }
     }
@@ -111,7 +106,7 @@ function checkWinner(arr) {
 function onMouseOver() {
     //console.log("onMouseOver:", this); 
 
-    if(this.texture == texture_rect && winner == null) {
+    if(this.texture == texture_rect && winner["type"] == null) {
         if(x_turn) {
             this.overlay = new PIXI.Sprite(texture_x);
 
@@ -128,28 +123,36 @@ function onMouseOut() {
     app.stage.removeChild(this.overlay);
 }
 
+function playersTurn(self) {
+    if(x_turn) {
+        board[self.arr_y][self.arr_x] = "X";
+        self.texture = texture_x;
+    } else {
+        board[self.arr_y][self.arr_x] = "O";
+        self.texture = texture_o;
+    }
+}
+
+function AIsTurn(player) {
+    let ai_move = minimax(board, true, player)["move"];
+    if(ai_move != undefined) {
+        board[ai_move[0]][ai_move[1]] = player;
+        rect_board[ai_move[0]][ai_move[1]].texture = player == "O" ? texture_o : texture_x;
+    }
+}
+
 function onClick() {
     //console.log("onClick:", this);
     app.stage.removeChild(this.overlay);
 
-    let x = this.arr_x, y = this.arr_y;
-
-    if(this.texture == texture_rect && winner == null) {
-        if(x_turn) {
-            board[y][x] = "X";
-            this.texture = texture_x;
-        } else {
-            board[y][x] = "O";
-            this.texture = texture_o;
+    if(this.texture == texture_rect && winner["type"] == null) {
+        playersTurn(this);
+        if(isFirstAI != -1) {
+            AIsTurn(x_turn ? "O" : "X");
         }
-
-        if(isVsAI) {
-            pickBest();
-        }
-
+        
         winner = checkWinner(board);
-
-        if(winner != null) {
+        if(winner["type"] != null) {
             smile.texture = texture_omg;
             if(winner["type"] == "X") {
                 console.log("X won!");
@@ -172,7 +175,7 @@ function onClick() {
                 rect_board[winner["moves"][1][0]][winner["moves"][1][1]].alpha = curr_alpha;
                 rect_board[winner["moves"][2][0]][winner["moves"][2][1]].alpha = curr_alpha;
             }, 10);
-        } else {
+        } else if(isFirstAI == -1) {
             x_turn = !x_turn;
         }
     }
@@ -186,7 +189,7 @@ PIXI.loader
 function setup() {
     smile = new PIXI.Sprite(PIXI.loader.resources["images/smile.png"].texture);
     smile.width = 400, smile.height = 400;
-    smile.x = RECT_WIDTH * BOARD_WIDTH + 450, smile.y = RECT_HEIGHT * BOARD_HEIGHT - 550;
+    smile.x = rect_board[0][0].width * 3 + 450, smile.y = rect_board[0][0].height * 3 - 550;
     app.stage.addChild(smile);
 }
 
@@ -199,7 +202,7 @@ let text = new PIXI.Text("Game in progress...", {
 });
 
 text.anchor.set(0.5);
-text.x = (RECT_WIDTH * BOARD_WIDTH + 450) + (400 / 2), text.y = (RECT_HEIGHT * BOARD_HEIGHT - 580) + 450;
+text.x = (rect_board[0][0].width * 3 + 450) + (400 / 2), text.y = (rect_board[0][0].height * 3 - 580) + 450;
 
 app.stage.addChild(text);
 
@@ -207,7 +210,7 @@ app.stage.addChild(text);
 const reset_button = new PIXI.Graphics()
     .beginFill(0xFFFFFF)
     .lineStyle(5, 0x641E16)
-    .drawRect((RECT_WIDTH * BOARD_WIDTH + 450) + (400 / 2) - (200 / 2), (RECT_HEIGHT * BOARD_HEIGHT - 500) + 450 - 25, 200, 100);
+    .drawRect((rect_board[0][0].width * 3 + 450) + (400 / 2) - (200 / 2), (rect_board[0][0].height * 3 - 500) + 450 - 25, 200, 100);
 
 reset_button.interactive = true;
 reset_button.buttonMode = true;
@@ -223,7 +226,7 @@ let reset_button_text = new PIXI.Text("RESET", {
 });
 
 reset_button_text.anchor.set(0.5);
-reset_button_text.x = (RECT_WIDTH * BOARD_WIDTH + 450) + (400 / 2) - (200 / 2) + (200 / 2), reset_button_text.y = (RECT_HEIGHT * BOARD_HEIGHT - 500) + 450 - 25 + (100 / 2);
+reset_button_text.x = (rect_board[0][0].width * 3 + 450) + (400 / 2) - (200 / 2) + (200 / 2), reset_button_text.y = (rect_board[0][0].height * 3 - 500) + 450 - 25 + (100 / 2);
 
 app.stage.addChild(reset_button);
 app.stage.addChild(reset_button_text);
@@ -234,19 +237,20 @@ function reset() {
     clearInterval(intervalId);
     smile.texture = texture_smile;
     x_turn = true;
+    isFirstAI = -1;
     text.text = "Game in progress...";
     
-    if(winner != null && winner != "-") {
+    if(winner["type"] != null && winner["type"] != "-") {
         rect_board[winner["moves"][0][0]][winner["moves"][0][1]].alpha = 1;
         rect_board[winner["moves"][1][0]][winner["moves"][1][1]].alpha = 1;
         rect_board[winner["moves"][2][0]][winner["moves"][2][1]].alpha = 1;
     }
-    winner = null;
+    winner = {type: null};
 
     board = [];
-    for(let x = 1; x <= BOARD_WIDTH; x++) {
+    for(let x = 1; x <= 3; x++) {
         board.push([]);
-        for(let y = 1; y <= BOARD_HEIGHT; y++) {
+        for(let y = 1; y <= 3; y++) {
             board[x - 1].push([]);
             board[x - 1][y - 1] = "*";
         }
@@ -263,7 +267,7 @@ function reset() {
 const ai_button = new PIXI.Graphics()
     .beginFill(0xFFFFFF)
     .lineStyle(5, 0x641E16)
-    .drawRect((RECT_WIDTH * BOARD_WIDTH + 450) + (400 / 2) - (200 / 2), (RECT_HEIGHT * BOARD_HEIGHT - 500) + 450 + 120, 200, 100);
+    .drawRect((rect_board[0][0].width * 3 + 450) + (400 / 2) - (200 / 2), (rect_board[0][0].height * 3 - 500) + 450 + 120, 200, 100);
 
 ai_button.interactive = true;
 ai_button.buttonMode = true;
@@ -279,31 +283,93 @@ let ai_button_text = new PIXI.Text("VS AI", {
 });
 
 ai_button_text.anchor.set(0.5);
-ai_button_text.x = (RECT_WIDTH * BOARD_WIDTH + 450) + (400 / 2) - (200 / 2) + (200 / 2), ai_button_text.y = (RECT_HEIGHT * BOARD_HEIGHT - 500) + 450 + 120 + (100 / 2);
+ai_button_text.x = (rect_board[0][0].width * 3 + 450) + (400 / 2) - (200 / 2) + (200 / 2), ai_button_text.y = (rect_board[0][0].height * 3 - 500) + 450 + 120 + (100 / 2);
 
 app.stage.addChild(ai_button);
 app.stage.addChild(ai_button_text);
 
 // Vs AI Function
 function vsAI() {
-    isVsAI = true
+    if(isFirstAI == -1) {
+        isFirstAI = Math.floor(Math.random() * 2);
+        if(isFirstAI == 1) {
+            AIsTurn("X");
+            x_turn = false;
+        }
+    }
 }
 
-function pickBest(curr_board, player, isMax) {
-    possible_moves = possibleMoves(player);
-    score = []
-    for(curr_move in possible_moves) {
-        temp_board = applyMove(curr_move)
-        winner = checkWinner(temp_board)
-        if(winner) {
-            if(winner["type"] == player) {
-                if(isMax) {
-                    score.push(100)
-                } else {
+function minimax(org_node, isMaximizingPlayer, currPlayer, count = 0) {
+    let node = cloneArray(org_node);
+    let possible_moves = getMoves(node);
+    let value = {};
 
-                }
+    if(isMaximizingPlayer) {
+        value["score"] = -Infinity;
+    } else {    // minimizing player
+        value["score"] = Infinity;
+    }
+
+    for(let curr_move of possible_moves) {
+        let new_node = applyMove(node, curr_move, currPlayer);
+        let winner = checkWinner(new_node)["type"];
+
+        if(winner != null) {
+            if(winner == currPlayer) {
+                value = {score: isMaximizingPlayer ? 100 : -100};
+            } else if(winner["type"] == "-") {
+                value = {score: 0};
+            } else {
+                value = {score: isMaximizingPlayer ? -100 : 100};
+            }
+            value["move"] = curr_move;
+        } else {
+            new_score = minimax(new_node, isMaximizingPlayer ? false : true, currPlayer == "X" ? "O" : "X", count + 1);
+            if((isMaximizingPlayer && new_score["score"] > value["score"]) || (!isMaximizingPlayer && new_score["score"] < value["score"])) {
+                    value["score"] = new_score["score"];
+                    value["move"] = curr_move;
             }
         }
-        score.push()
     }
+    return {score: value["score"], move: value["move"]};
+}
+
+function cloneArray(org){
+    var newArray = [];
+
+    for (var i = 0; i < org.length; i++)
+        newArray[i] = org[i].slice();
+    
+    return newArray;
+}
+
+function checkScore(board, currPlayer) {
+    let winner = checkWinner(board);
+    if(winner["type"] == currPlayer) {
+        return 100;
+    } else if(winner["type"] == "-") {
+        return 0;
+    } else if(winner["type"] == null) {
+        return null;
+    } else {
+        return -100;
+    }
+}
+
+function getMoves(board) {
+    let possible_moves = [];
+    for(let i = 0; i < board.length; i++) {
+        for(let j = 0; j < board[i].length; j++) {
+            if(board[i][j] == "*") {
+                possible_moves.push([i, j]);
+            } 
+        }
+    }
+    return possible_moves;
+}
+
+function applyMove(board, move, type) {
+    board_clone = cloneArray(board);
+    board_clone[move[0]][move[1]] = type;
+    return board_clone;
 }
